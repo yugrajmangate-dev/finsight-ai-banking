@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import models  # noqa: F401  (register tables)
-from .config import FRONTEND_ORIGIN, LLM_API_KEY
+from .config import BASE_DIR, FRONTEND_ORIGIN, LLM_API_KEY
 from .db import Base, engine
-from .errors import register_error_handlers
+from .errors import ApiError, register_error_handlers
 from .routers import admin, auth, customer
 
 Base.metadata.create_all(engine)
@@ -22,3 +24,19 @@ for r in (auth.router, customer.router, admin.router):
 @app.get("/api/v1/health")
 def health():
     return {"data": {"status": "ok", "assistant_mode": "llm" if LLM_API_KEY else "offline"}}
+
+
+# In production the built React app (frontend/dist) is served by this same server,
+# so the UI and API share one origin and the session cookie works without CORS.
+DIST = BASE_DIR.parent / "frontend" / "dist"
+if DIST.exists():
+    app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str):
+        if path.startswith("api/"):
+            raise ApiError(404, "not_found", "Endpoint not found")
+        f = (DIST / path).resolve()
+        if path and f.is_file() and DIST.resolve() in f.parents:
+            return FileResponse(f)
+        return FileResponse(DIST / "index.html")

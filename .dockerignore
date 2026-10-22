@@ -1,0 +1,8 @@
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.db*
+backend/.env
+backend/app/ai/anomaly_model.joblib
+frontend/dist
+.git

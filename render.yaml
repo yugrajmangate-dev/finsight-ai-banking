@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: finsight-bank
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: LLM_API_KEY
+        sync: false
